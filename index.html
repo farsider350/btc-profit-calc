@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin Mining Profitability Calculator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: orange;
+            background-image: linear-gradient(to right, orange, darkorange);
+            background-repeat: repeat;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .title {
+            text-align: center;
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #f7931a;
+        }
+
+        .flex {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .section {
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            flex: 1;
+        }
+
+        .section h2 {
+            text-align: center;
+            font-size: 20px;
+            color: #f7931a;
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        input {
+            width: calc(80% - 10px);
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .api-button {
+            width: 18%;
+            padding: 10px;
+            margin-left: 2%;
+            background-color: #f7931a;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .api-button:hover {
+            background-color: #e67e22;
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background-color: #f7931a;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #e67e22;
+        }
+
+        .results p {
+            margin: 5px 0;
+            font-size: 16px;
+        }
+
+        .calculation-details {
+            font-size: 14px;
+            margin-top: 10px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="title">Bitcoin Mining Profitability Calculator</div>
+        <div class="flex">
+            <div class="section">
+                <h2>Values</h2>
+                <label for="powerCost">Power Cost ($/kWh):</label>
+                <input type="number" id="powerCost" step="0.00000001" placeholder="Enter cost of electricity">
+
+                <label for="hashRate">Total Hash Rate (TH/s):</label>
+                <input type="number" id="hashRate" step="0.01" placeholder="Enter total hash rate">
+
+                <label for="wattsUsed">Total Power Usage (Watts):</label>
+                <input type="number" id="wattsUsed" step="0.01" placeholder="Enter total power usage">
+
+                <label for="poolFee">Pool Fee (%):</label>
+                <input type="number" id="poolFee" step="0.01" placeholder="Enter pool fee percentage">
+
+                <label for="blockReward">Block Reward (BTC):</label>
+                <div style="display: flex; align-items: center;">
+                    <input type="number" id="blockReward" step="0.00000001" placeholder="Enter current block reward">
+                    <button class="api-button" id="fetchBlockReward">Fetch</button>
+                </div>
+
+                <label for="difficultyFactor">Network Difficulty:</label>
+                <div style="display: flex; align-items: center;">
+                    <input type="number" id="difficultyFactor" step="1" placeholder="Enter network difficulty">
+                    <button class="api-button" id="fetchDifficulty">Fetch</button>
+                </div>
+
+                <label for="marketPrice">Market Price ($):</label>
+                <div style="display: flex; align-items: center;">
+                    <input type="number" id="marketPrice" step="0.01" placeholder="Enter Bitcoin market price">
+                    <button class="api-button" id="fetchMarketPrice">Fetch</button>
+                </div>
+
+                <button id="calculate">Calculate Profitability</button>
+            </div>
+
+            <div class="section">
+                <h2>Costs</h2>
+                <div class="results">
+                    <p id="costDay">Cost per Day: -</p>
+                    <p id="costMonth">Cost per Month: -</p>
+                    <p id="costYear">Cost per Year: -</p>
+                    <p class="calculation-details" id="costDetails">Details: -</p>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>Profits</h2>
+                <div class="results">
+                    <p id="profitDay">Dollars per Day: -</p>
+                    <p id="btcPerDay">Bitcoin per Day: -</p>
+                    <p id="profitMonth">Dollars per Month: -</p>
+                    <p id="btcPerMonth">Bitcoin per Month: -</p>
+                    <p id="profitYear">Dollars per Year: -</p>
+                    <p id="btcPerYear">Bitcoin per Year: -</p>
+                    <p class="calculation-details" id="profitDetails">Details: -</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchBlockReward() {
+            try {
+                const response = await fetch('https://blockstream.info/api/blocks/tip/height');
+                if (!response.ok) throw new Error('Failed to fetch block height');
+                const blockHeight = await response.json();
+                const reward = blockHeight >= 840000 ? 3.125 : 6.25; // Adjust based on halving
+                document.getElementById('blockReward').value = reward;
+            } catch (error) {
+                alert('Error fetching block reward: ' + error.message);
+            }
+        }
+
+        async function fetchDifficulty() {
+            try {
+                const response = await fetch('https://api.blockchain.info/q/getdifficulty');
+                if (!response.ok) throw new Error('Failed to fetch network difficulty');
+                const difficulty = await response.json();
+                document.getElementById('difficultyFactor').value = difficulty;
+            } catch (error) {
+                alert('Error fetching network difficulty: ' + error.message);
+            }
+        }
+
+        async function fetchMarketPrice() {
+            try {
+                const response = await fetch('https://api.coindesk.com/v1/bpi/currentprice/BTC.json');
+                if (!response.ok) throw new Error('Failed to fetch market price');
+                const data = await response.json();
+                const price = parseFloat(data.bpi.USD.rate.replace(/,/g, ''));
+                document.getElementById('marketPrice').value = price;
+            } catch (error) {
+                alert('Error fetching market price: ' + error.message);
+            }
+        }
+
+        document.getElementById('fetchBlockReward').addEventListener('click', fetchBlockReward);
+        document.getElementById('fetchDifficulty').addEventListener('click', fetchDifficulty);
+        document.getElementById('fetchMarketPrice').addEventListener('click', fetchMarketPrice);
+
+        function calculateProfitability(powerCost, hashRate, wattsUsed, poolFee, blockReward, difficultyFactor, marketPrice) {
+            const powerUsageInKwh = wattsUsed / 1000; // Convert watts to kWh
+            const powerCostPerDay = powerUsageInKwh * 24 * powerCost;
+
+            const hashRatePerSecond = hashRate * 1e12; // Convert TH/s to H/s
+            const rewardPerDay = (blockReward * 86400 * hashRatePerSecond) / (difficultyFactor * 2 ** 32);
+            const revenuePerDay = rewardPerDay * marketPrice * (1 - poolFee / 100);
+
+            const profitPerDay = revenuePerDay - powerCostPerDay;
+            const profitPerMonth = profitPerDay * 30;
+            const profitPerYear = profitPerDay * 365;
+
+            return {
+                profitPerDay,
+                profitPerMonth,
+                profitPerYear,
+                rewardPerDay,
+                costPerDay: powerCostPerDay,
+                costPerMonth: powerCostPerDay * 30,
+                costPerYear: powerCostPerDay * 365,
+                costDetails: `Cost = (Power Usage × 24 × Power Cost)` ,
+                profitDetails: `Profit = Revenue - Cost | Revenue = ((Block Reward × 86400 × Hash Rate) ÷ (Difficulty × 2^32)) × Market Price × (1 - Pool Fee/100)`
+            };
+        }
+
+        document.getElementById('calculate').addEventListener('click', () => {
+            const powerCost = parseFloat(document.getElementById('powerCost').value);
+            const hashRate = parseFloat(document.getElementById('hashRate').value);
+            const wattsUsed = parseFloat(document.getElementById('wattsUsed').value);
+            const poolFee = parseFloat(document.getElementById('poolFee').value);
+            const blockReward = parseFloat(document.getElementById('blockReward').value);
+            const difficultyFactor = parseFloat(document.getElementById('difficultyFactor').value);
+            const marketPrice = parseFloat(document.getElementById('marketPrice').value);
+
+            if (
+                isNaN(powerCost) ||
+                isNaN(hashRate) ||
+                isNaN(wattsUsed) ||
+                isNaN(poolFee) ||
+                isNaN(blockReward) ||
+                isNaN(difficultyFactor) ||
+                isNaN(marketPrice) ||
+                powerCost <= 0 ||
+                hashRate <= 0 ||
+                wattsUsed <= 0 ||
+                poolFee < 0 ||
+                blockReward <= 0 ||
+                difficultyFactor <= 0 ||
+                marketPrice <= 0
+            ) {
+                alert('Please enter valid values for all fields.');
+                return;
+            }
+
+            const {
+                profitPerDay,
+                profitPerMonth,
+                profitPerYear,
+                rewardPerDay,
+                costPerDay,
+                costPerMonth,
+                costPerYear,
+                costDetails,
+                profitDetails
+            } = calculateProfitability(powerCost, hashRate, wattsUsed, poolFee, blockReward, difficultyFactor, marketPrice);
+
+            document.getElementById('profitDay').innerText = `Dollars per Day: $${profitPerDay.toFixed(2)}`;
+            document.getElementById('btcPerDay').innerText = `Bitcoin per Day: ${rewardPerDay.toFixed(8)} BTC`;
+            document.getElementById('profitMonth').innerText = `Dollars per Month: $${profitPerMonth.toFixed(2)}`;
+            document.getElementById('btcPerMonth').innerText = `Bitcoin per Month: ${(rewardPerDay * 30).toFixed(8)} BTC`;
+            document.getElementById('profitYear').innerText = `Dollars per Year: $${profitPerYear.toFixed(2)}`;
+            document.getElementById('btcPerYear').innerText = `Bitcoin per Year: ${(rewardPerDay * 365).toFixed(8)} BTC`;
+            document.getElementById('profitDetails').innerText = profitDetails;
+
+            document.getElementById('costDay').innerText = `Cost per Day: $${costPerDay.toFixed(2)}`;
+            document.getElementById('costMonth').innerText = `Cost per Month: $${costPerMonth.toFixed(2)}`;
+            document.getElementById('costYear').innerText = `Cost per Year: $${costPerYear.toFixed(2)}`;
+            document.getElementById('costDetails').innerText = costDetails;
+        });
+    </script>
+<div style="position: fixed; bottom: 10px; right: 10px; font-size: 10px; color: #333;">Brought To You by Setherson</div>
+
+</body>
+</html>
