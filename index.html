@@ -157,6 +157,13 @@
                     <p id="costYear">Cost per Year: -</p>
                     <p class="calculation-details" id="costDetails">Details: -</p>
                 </div>
+
+                <div class="section">
+                    <h2>Efficiency</h2>
+                    <div class="results">
+                        <p id="efficiency">Efficiency (Watts/TH): -</p>
+                    </div>
+                </div>
             </div>
 
             <div class="section">
@@ -169,6 +176,16 @@
                     <p id="profitYear">Dollars per Year: -</p>
                     <p id="btcPerYear">Bitcoin per Year: -</p>
                     <p class="calculation-details" id="profitDetails">Details: -</p>
+                </div>
+
+                <div class="section">
+                    <h2>Bitcoin USD Cost Basis</h2>
+                    <div class="results">
+                        <p id="costBasis">Cost per Bitcoin: -</p>
+                        <p id="spotPercentage">% of Spot Price: -</p>
+                        <p id="spotDiscount">% Discount on Spot Price: -</p>
+                        <button id="downloadCsv">Download CSV File</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -226,6 +243,12 @@
             const profitPerMonth = profitPerDay * 30;
             const profitPerYear = profitPerDay * 365;
 
+            const costPerBitcoin = powerCostPerDay / rewardPerDay; // Calculate cost per BTC
+            const spotPricePercentage = (costPerBitcoin / marketPrice) * 100;
+            const spotDiscountPercentage = 100 - spotPricePercentage; // Calculate discount on spot price
+
+            const efficiency = wattsUsed / hashRate; // Efficiency calculation in Watts/TH
+
             return {
                 profitPerDay,
                 profitPerMonth,
@@ -235,7 +258,11 @@
                 costPerMonth: powerCostPerDay * 30,
                 costPerYear: powerCostPerDay * 365,
                 costDetails: `Cost = (Power Usage × 24 × Power Cost)` ,
-                profitDetails: `Profit = Revenue - Cost | Revenue = ((Block Reward × 86400 × Hash Rate) ÷ (Difficulty × 2^32)) × Market Price × (1 - Pool Fee/100)`
+                profitDetails: `Profit = Revenue - Cost | Revenue = ((Block Reward × 86400 × Hash Rate) ÷ (Difficulty × 2^32)) × Market Price × (1 - Pool Fee/100)` ,
+                costPerBitcoin,
+                spotPricePercentage,
+                spotDiscountPercentage,
+                efficiency
             };
         }
 
@@ -277,7 +304,11 @@
                 costPerMonth,
                 costPerYear,
                 costDetails,
-                profitDetails
+                profitDetails,
+                costPerBitcoin,
+                spotPricePercentage,
+                spotDiscountPercentage,
+                efficiency
             } = calculateProfitability(powerCost, hashRate, wattsUsed, poolFee, blockReward, difficultyFactor, marketPrice);
 
             document.getElementById('profitDay').innerText = `Dollars per Day: $${profitPerDay.toFixed(2)}`;
@@ -292,9 +323,52 @@
             document.getElementById('costMonth').innerText = `Cost per Month: $${costPerMonth.toFixed(2)}`;
             document.getElementById('costYear').innerText = `Cost per Year: $${costPerYear.toFixed(2)}`;
             document.getElementById('costDetails').innerText = costDetails;
+
+            document.getElementById('costBasis').innerText = `Cost per Bitcoin: $${costPerBitcoin.toFixed(2)}`;
+            document.getElementById('spotPercentage').innerText = `% of Spot Price: ${spotPricePercentage.toFixed(2)}%`;
+            document.getElementById('spotDiscount').innerText = `% Discount on Spot Price: ${spotDiscountPercentage.toFixed(2)}%`;
+
+            document.getElementById('efficiency').innerText = `Efficiency (Watts/TH): ${efficiency.toFixed(2)}`;
+        });
+
+        document.getElementById('downloadCsv').addEventListener('click', () => {
+            const values = {
+                'Power Cost ($/kWh)': document.getElementById('powerCost').value,
+                'Total Hash Rate (TH/s)': document.getElementById('hashRate').value,
+                'Total Power Usage (Watts)': document.getElementById('wattsUsed').value,
+                'Pool Fee (%)': document.getElementById('poolFee').value,
+                'Block Reward (BTC)': document.getElementById('blockReward').value,
+                'Network Difficulty': document.getElementById('difficultyFactor').value,
+                'Market Price ($)': document.getElementById('marketPrice').value,
+                'Cost per Day': document.getElementById('costDay').innerText,
+                'Cost per Month': document.getElementById('costMonth').innerText,
+                'Cost per Year': document.getElementById('costYear').innerText,
+                'Profit per Day': document.getElementById('profitDay').innerText,
+                'Bitcoin per Day': document.getElementById('btcPerDay').innerText,
+                'Profit per Month': document.getElementById('profitMonth').innerText,
+                'Bitcoin per Month': document.getElementById('btcPerMonth').innerText,
+                'Profit per Year': document.getElementById('profitYear').innerText,
+                'Bitcoin per Year': document.getElementById('btcPerYear').innerText,
+                'Cost per Bitcoin': document.getElementById('costBasis').innerText,
+                '% of Spot Price': document.getElementById('spotPercentage').innerText,
+                '% Discount on Spot Price': document.getElementById('spotDiscount').innerText,
+                'Efficiency (Watts/TH)': document.getElementById('efficiency').innerText
+            };
+
+            let csvContent = 'data:text/csv;charset=utf-8,';
+            csvContent += Object.keys(values).join(',') + '\n';
+            csvContent += Object.values(values).join(',');
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement('a');
+            link.setAttribute('href', encodedUri);
+            link.setAttribute('download', 'bitcoin_mining_data.csv');
+            document.body.appendChild(link);
+
+            link.click();
+            document.body.removeChild(link);
         });
     </script>
-<div style="position: fixed; bottom: 10px; right: 10px; font-size: 10px; color: #333;">Brought To You by Setherson</div>
 
 </body>
 </html>
